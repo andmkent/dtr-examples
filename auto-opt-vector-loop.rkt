@@ -4,10 +4,6 @@
 (define v : (Vectorof Natural) (build-vector (random 100) (λ _ (random 10))))
 
 
-;; we should support this
-#;(define-type-syntax (Index-for v)
-    (Refine [i : Integer] (≤ 0 i) (< i (len v))))
-
 (for/sum ([i : (Refine [i : Index] (≤ 0 i) (< i (len v)))
              (in-range (vector-length v))])
-  (safe-vector-ref v i))
+  (vector-ref v i)) ;; this automatically optimizes to unsafe-vector-ref
