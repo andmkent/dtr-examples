@@ -1,5 +1,4 @@
 #lang typed/racket
-(require typed/safe/ops)
 
 (: negate (~> ([x : (U Number Boolean)]) 
               (Refine [z : (U Number Boolean)]
