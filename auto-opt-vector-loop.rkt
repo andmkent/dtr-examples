@@ -1,5 +1,4 @@
 #lang typed/racket
-(require typed/safe/ops)
 
 (define v : (Vectorof Natural) (build-vector (random 100) (λ _ (random 10))))
 
