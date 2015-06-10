@@ -9,6 +9,6 @@
     "invalid bound!")
 
 ;; this should work too!
-#;(if (< x (vector-length v))
+(if (< x (vector-length v))
     (safe-vector-ref v x)
     "invalid bound!")
