@@ -4,9 +4,6 @@
 (define-type (Vec a) (Vectorof a))
 (define-type Int Integer)
 
-(define-syntax-rule (safe-matrix-set! A r c val)
-  (safe-vector-set! (safe-vector-ref A r) c val))
-
 ;; A[m×n] * B[n×p] = C[m×p]) 
 (: matrix*
    (~> ([A : (Refine [A : (Vec (Refine [a : (Vec Int)] (= (len a) n)))] (= (len A) m))]
@@ -24,12 +21,26 @@
       (let j-loop ([j : Natural 0])
         (when (< j p)
           (let k-loop ([k : Natural 0] [sum : Integer 0])
+            (printf "k-loop ~a ~a\n" k sum)
             (cond
               [(< k n)
                (define A-i-k (safe-vector-ref A-i k))
                (define B-k-j (safe-vector-ref (safe-vector-ref B k) j))
-               (k-loop (add1 i) (* A-i-k B-k-j))]
+               (k-loop (add1 k) (+ sum (* A-i-k B-k-j)))]
               [else
-               (safe-matrix-set! C i j sum)]))
+               (safe-vector-set! C-i j sum)]))
           (j-loop (add1 j))))
       (i-loop (add1 i)))))
+
+(define X : (Refine [A : (Vec (Refine [a : (Vec Int)] (= (len a) 4)))] (= (len A) 4))
+  (build-vector 4 (λ ([n : Index])
+                    (build-vector 4 (λ ([n : Index]) : Int 1)))))
+(define Y : (Refine [A : (Vec (Refine [a : (Vec Int)] (= (len a) 4)))] (= (len A) 4))
+  (build-vector 4 (λ ([n : Index])
+                    (build-vector 4 (λ ([n : Index]) : Int 1)))))
+(define Z : (Refine [A : (Vec (Refine [a : (Vec Int)] (= (len a) 4)))] (= (len A) 4))
+  (build-vector 4 (λ ([n : Index])
+                    (build-vector 4 (λ ([n : Index]) : Int 0)))))
+
+(matrix* X Y Z 4 4 4)
+Z
