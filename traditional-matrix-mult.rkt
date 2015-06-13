@@ -21,7 +21,6 @@
       (let j-loop ([j : Natural 0])
         (when (< j p)
           (let k-loop ([k : Natural 0] [sum : Integer 0])
-            (printf "k-loop ~a ~a\n" k sum)
             (cond
               [(< k n)
                (define A-i-k (safe-vector-ref A-i k))
@@ -44,3 +43,4 @@
 
 (matrix* X Y Z 4 4 4)
 Z
+;; => '#(#(4 4 4 4) #(4 4 4 4) #(4 4 4 4) #(4 4 4 4))
