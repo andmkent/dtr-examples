@@ -4,9 +4,6 @@
 (define-type (Vec a) (Vectorof a))
 (define-type Int Integer)
 
-(define-syntax-rule (safe-matrix-ref A r c)
-  (safe-vector-ref (safe-vector-ref A r) c))
-
 (define-syntax-rule (safe-matrix-set! A r c val)
   (safe-vector-set! (safe-vector-ref A r) c val))
 
@@ -22,14 +19,16 @@
 (define (matrix* A B C m n p)
   (let i-loop ([i : Natural 0])
     (when (< i m)
+      (define A-i (safe-vector-ref A i))
+      (define C-i (safe-vector-ref C i))
       (let j-loop ([j : Natural 0])
         (when (< j p)
           (let k-loop ([k : Natural 0] [sum : Integer 0])
             (cond
               [(< k n)
-               (k-loop (add1 k)
-                       (* (safe-matrix-ref A i k)
-                          (safe-matrix-ref B k j)))]
+               (define A-i-k (safe-vector-ref A-i k))
+               (define B-k-j (safe-vector-ref (safe-vector-ref B k) j))
+               (k-loop (add1 i) (* A-i-k B-k-j))]
               [else
                (safe-matrix-set! C i j sum)]))
           (j-loop (add1 j))))
