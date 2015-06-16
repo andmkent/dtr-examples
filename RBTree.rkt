@@ -188,7 +188,7 @@
 
   (blacken-root (ins rbt)))
 
-(: blacken-root (-> (U RBTree RRNode) RBTree))
+(: blacken-root (-> (U RBTree* RRNode) RBTree))
 (define (blacken-root res)
   (if (eq? 'black (car res))
       res
