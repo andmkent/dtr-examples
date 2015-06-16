@@ -161,7 +161,7 @@
 (: insert (-> Int RBTree RBTree))
 (define (insert int rbt)
   (: ins (~> ([t : RBTree*])
-             (Refine [t* : RBTree*]
+             (Refine [t* : (U RRNode RBTree*)]
                      (= (second t) (second t*)))))
   (define (ins t)
     (cond
