@@ -11,10 +11,10 @@
          node]
         body ...)
      #'(let ([h1 (second node)]
-             [h2 (second (second node))]
-             [ilhs (third (second node))]
-             [ival (fourth (second node))]
-             [irhs (fifth (second node))]
+             [h2 (second (third node))]
+             [ilhs (third (third node))]
+             [ival (fourth (third node))]
+             [irhs (fifth (third node))]
              [val (fourth node)]
              [rhs (fifth node)])
          body ...)]
@@ -26,10 +26,10 @@
         body ...)
      #'(let ([h1 (second node)]
              [lhs (third node)]
-             [h2 (second (fourth node))]
-             [ilhs (third (fourth node))]
-             [ival (fourth (fourth node))]
-             [irhs (fifth (fourth node))]
+             [h2 (second (fifth node))]
+             [ilhs (third (fifth node))]
+             [ival (fourth (fifth node))]
+             [irhs (fifth (fifth node))]
              [val (fourth node)])
          body ...)]
     [(_ [((~datum Node:) c:id h:id lhs:id val:id rhs:id) node]
@@ -62,14 +62,18 @@
 
 (define-type Int Integer)
 (define-type Nat Natural)
+
 (: natural? (-> Any Boolean : Nat))
 (define (natural? nat)
   (exact-nonnegative-integer? nat))
 
-(define-type Color (U 'black 'red))
+(define-type Color (U Black Red))
 
+(define-type Black
+  'black)
 
-
+(define-type Red
+  'red)
 
 (define-type Leaf
   (List 'black Zero))
@@ -79,7 +83,6 @@
          (= (second bn) (+ 1 (second (third bn))))
          (= (second bn) (+ 1 (second (fifth bn))))))
 
-
 (define-type BTree
   (U BNode Leaf))
 
@@ -88,11 +91,8 @@
          (= (second rn) (second (third rn)))
          (= (second rn) (second (fifth rn)))))
 
-(define-type RBTree
-  BTree)
-
 (define-type RBTree*
-  (U RNode BNode Leaf))
+  (U RNode BTree))
 
 (define-type R-LRNode ;; double check ref
   (Refine [rn : (List 'red Nat RNode Int BTree)]
@@ -106,43 +106,91 @@
 
 (define-type RRNode (U R-LRNode R-RRNode))
 
+
 (: restore-L (~> ([l : (U RRNode RBTree*)]
                   [val : Int]
                   [r : (Refine [r : RBTree*]
                                (= (second r) (second l)))])
                  (Refine [t : RBTree*]
-                         (= (second t) (+ 1 (second l))))))
+                         ;; BUG If below were (= (second t) (+ 1 (second l)))
+                         ;; ins does not type-check
+                         (= (second t) (+ 1 (second r))))))
 (define (restore-L l val r)
+  (error 'WORKING) #;
   (cond
-    [(eq? 'red (rb-color (rb-lhs l)))
+    [(and (eq? 'red (rb-color l))
+          (eq? 'red (rb-color (rb-lhs l))))
      (with
       [(R: h1 (R: h2 l2 v2 r2) v1 r1) l]
-      (error 'do-stuff))]
-    [(eq? 'red (rb-color (rb-rhs l)))
+      (mk-R
+       (mk-B l2 v2 r2)
+       v1
+       (mk-B r1 val r)))]
+    [(and (eq? 'red (rb-color l))
+          (eq? 'red (rb-color (rb-rhs l))))       
      (with
       [(R: h1 l1 v1 (R: h2 l2 v2 r2)) l]
-      (error 'do-stuff))]
-    [else ;; RBTRee*
-     (error 'just-blacken?-or-make-black-node?)]))
+      (mk-R
+       (mk-B l1 v1 l2)
+       v2
+       (mk-B r2 val r)))]
+    [else ;; RBTree*
+     (mk-B l val r)]))
 
-(: restore-R (~> ([r : (Refine [r : RBTree*]
-                               (= (second r) (second l)))]
+(: restore-R (~> ([l : (Refine [l : RBTree*]
+                               (= (second l) (second r)))]
                   [val : Int]
-                  [l : (U RRNode RBTree*)])
+                  [r : (U RRNode RBTree*)])
                  (Refine [t : RBTree*]
-                         (= (second t) (+ 1 (second l))))))
+                         (= (second t) (+ 1 (second l)))
+                         (= (second t) (+ 1 (second r))))))
 (define (restore-R l val r)
-  (error 'foo))
+  (error 'WORKING) #;
+  (cond
+    [(and (eq? 'red (rb-color r))
+          (eq? 'red (rb-color (rb-lhs r))))
+     (with
+      [(R: h1 (R: h2 l2 v2 r2) v1 r1) r]
+      (mk-R
+       (mk-B l val l2)
+       v2
+       (mk-B r2 v1 r1)))]
+    [(and (eq? 'red (rb-color r))
+          (eq? 'red (rb-color (rb-rhs r))))       
+     (with
+      [(R: h1 l1 v1 (R: h2 l2 v2 r2)) r]
+      (mk-R
+       (mk-B l val l1)
+       v1
+       (mk-B l2 v2 r2)))]
+    [else ;; RBTree*
+     (mk-B l val r)]))
 
-(: mk-R (~> ([t1 : BTree]
+(: mk-R (~> ([t1 : RBTree*]
              [int : Int]
-             [t2 : (Refine [t : BTree]
+             [t2 : (Refine [t2 : RBTree*]
                            (= (second t1) (second t2)))])
-                  RNode))
-(define (mk-R height tree1 int tree2)
-  (list 'red (rb-height tree1) tree1 int tree2))
+            (Refine [r : (U RRNode RNode)]
+                    (= (second t1) (second r))
+                    (= (second t2) (second r))
+                    (or
+                     (and (t1 -: BTree)
+                          (t2 -: BTree)
+                          (r -: RNode))
+                     (r -: RRNode)))))
+(define (mk-R tree1 int tree2)
+  (error 'stuff) #;
+  (list 'red (second tree1) tree1 int tree2))
 
-;; mk-B
+#;#;
+(: mk-B (~> ([t1 : RBTree*]
+             [int : Int]
+             [t2 : (Refine [t : RBTree*]
+                           (= (second t1) (second t2)))])
+            (Refine [r : BNode]
+                    (= (+ 1 (second t2)) (second r)))))
+(define (mk-B tree1 int tree2)
+  (list 'black (+ 1 (cadr tree2)) tree1 int tree2))
 
 (define-predicate leaf? Leaf)
 
@@ -152,21 +200,28 @@
 (define rb-value fourth)
 (define rb-rhs fifth)
 
-
+#;#;#;#;
+(: black? (-> (Listof Any) Boolean))
 (define (black? t)
   (eq? 'black (car t)))
+(: red? (-> (Listof Any) Boolean))
 (define (red? t)
   (eq? 'red (car t)))
 
-(: insert (-> Int RBTree RBTree))
+(: insert (-> Int BTree BTree))
 (define (insert int rbt)
   (: ins (~> ([t : RBTree*])
              (Refine [t* : (U RRNode RBTree*)]
-                     (= (second t) (second t*)))))
+                     (= (second t) (second t*))
+                     (or
+                      (and (t -: BTree)
+                           (t* -: RBTree*))
+                      (and ((car t) -: Red)
+                           (t* -: (U RRNode RBTree*)))))))
   (define (ins t)
     (cond
       [(leaf? t)
-       (mk-R 0 t int t)]
+       (mk-R t int t)]
       [else
        (with
         [(Node: c h lhs v rhs) t]
@@ -175,7 +230,7 @@
            (cond
              [(< int v) 
               (restore-L (ins lhs) v rhs)]
-             [(> int (rb-value t))
+             [(> int v)
               (restore-R lhs v (ins rhs))]
              [else t])]
           [else ;; red c
@@ -185,17 +240,32 @@
              [(> int v)
               (mk-R lhs v (ins rhs))]
              [else t])]))]))
-
   (blacken-root (ins rbt)))
 
-(: blacken-root (-> (U RBTree* RRNode) RBTree))
-(define (blacken-root res)
-  (if (eq? 'black (car res))
-      res
-      (cons 'black (cdr res))))
 
+(: blacken-root (-> (U RBTree* RRNode) BTree))
+(define (blacken-root res)
+  (cond
+    [(leaf? res)
+     res]
+    [(eq? 'black (car res))
+     res]
+    [(= (second (third res))
+        (second (fifth res)))
+     (list 'black
+           (+ 1 (second res))
+           (third res)
+           (fourth res)
+           (fifth res))]
+    [else (list 'black
+                (+ 1 (second (third res)))
+                (third res)
+                (fourth res)
+                (fifth res))]))
+
+#;#; ;WORKING
 (: build-rbtree (-> (Listof Int) RBTree))
 (define (build-rbtree ls-int)
-  (for/fold ([rbt (list 0 0)])
+  (for/fold ([rbt : RBTree (list 'black 0)])
             ([int (in-list ls-int)])
     (insert int rbt)))
